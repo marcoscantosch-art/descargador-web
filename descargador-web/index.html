@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="es" class="dark scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediaGrab Pro - Descargador Universal de Vídeo y Música HD</title>
+    <!-- Tailwind CSS CDN con configuración personalizada -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        zinc: {
+                            850: '#121215',
+                            900: '#09090b',
+                            950: '#050507',
+                        },
+                        brand: {
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts & FontAwesome icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Vue 3 CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #09090b;
+            color: #f4f4f5;
+        }
+        .ad-placeholder {
+            background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 12px 12px;
+        }
+        .glass-panel {
+            background: rgba(18, 18, 21, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+        .gradient-border {
+            position: relative;
+        }
+        .gradient-border::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.4), rgba(168, 85, 247, 0.2), transparent);
+            border-radius: 1rem;
+            z-index: -1;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #09090b;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #27272a;
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #3f3f46;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-indigo-600 selection:text-white custom-scrollbar antialiased">
+
+    <div id="app" class="flex-grow flex flex-col">
+        
+        <!-- Header Principal -->
+        <header class="border-b border-zinc-800/80 glass-panel sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                <!-- Logo -->
+                <div class="flex items-center space-x-3 cursor-pointer" @click="resetToHome">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                        <i class="fa-solid fa-cloud-arrow-down text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xl font-black tracking-tight text-white">MediaGrab<span class="text-indigo-500">.pro</span></span>
+                            <span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full">v4.8 Ultra</span>
+                        </div>
+                        <p class="text-[10px] text-zinc-400 hidden sm:block">Descargador Multi-Plataforma Sin Marcas de Agua</p>
+                    </div>
+                </div>
+
+                <!-- Nav & Quick Controls -->
+                <nav class="flex items-center space-x-2 sm:space-x-4">
+                    <button @click="scrollToSection('supported-platforms')" class="text-xs font-medium text-zinc-400 hover:text-white transition px-2.5 py-1.5 rounded-lg hover:bg-zinc-800">
+                        Plataformas
+                    </button>
+                    <button @click="scrollToSection('faq')" class="text-xs font-medium text-zinc-400 hover:text-white transition px-2.5 py-1.5 rounded-lg hover:bg-zinc-800 hidden sm:inline-block">
+                        Preguntas Frecuentes
+                    </button>
+                    <button @click="toggleAdPreviewMode" :class="showAdBanners ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' : 'bg-zinc-800 border-zinc-700 text-zinc-400'" class="text-xs font-mono px-3 py-1.5 rounded-lg border transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-rectangle-ad text-sm"></i>
+                        <span class="hidden md:inline">{{ showAdBanners ? 'Anuncios: Visibles' : 'Anuncios: Ocultos' }}</span>
+                    </button>
+                </nav>
+            </div>
+        </header>
+
+        <!-- BLOQUE PUBLICITARIO #1: Header Leaderboard Banner (728x90 Desktop / 320x50 Mobile) -->
+        <section v-if="showAdBanners" class="w-full bg-zinc-950/80 border-b border-zinc-800/50 py-2 px-4 flex justify-center items-center">
+            <div class="max-w-7xl w-full flex flex-col items-center">
+                <div class="w-full max-w-[728px] h-[90px] hidden md:flex items-center justify-between border border-zinc-800 bg-zinc-900/60 rounded-lg p-3 text-xs text-zinc-500 ad-placeholder relative overflow-hidden group">
+                    <div class="flex items-center space-x-3 z-10">
+                        <div class="w-12 h-12 rounded bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center font-bold text-lg">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </div>
+                        <div>
+                            <span class="bg-amber-500/20 text-amber-300 font-mono text-[9px] px-1.5 py-0.5 rounded border border-amber-500/30 font-bold uppercase tracking-wider">Patrocinado</span>
+                            <h4 class="text-white font-bold text-sm leading-tight mt-0.5">VPN Ultra Rápida & Anonimato Completo</h4>
+                            <p class="text-zinc-400 text-xs">Protege tus descargas y navega a velocidad gigabit sin restricciones.</p>
+                        </div>
+                    </div>
+                    <a href="#" @click.prevent="openAdModal" class="z-10 bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-md text-xs transition shadow-md whitespace-nowrap">
+                        Probar Gratis <i class="fa-solid fa-arrow-right ml-1"></i>
+                    </a>
+                    <span class="absolute top-1 right-2 text-[9px] font-mono text-zinc-600">Google AdSense • 728x90 Leaderboard</span>
+                </div>
+                <!-- Versión Móvil 320x50 -->
+                <div class="w-[320px] h-[50px] md:hidden flex items-center justify-between border border-zinc-800 bg-zinc-900/80 rounded-lg px-3 text-xs text-zinc-500 ad-placeholder relative overflow-hidden">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-bolt text-indigo-400 text-sm"></i>
+                        <div>
+                            <div class="text-[11px] text-white font-bold leading-none">Acelera tus descargas</div>
+                            <div class="text-[9px] text-zinc-400">VPN Servidor Seguro</div>
+                        </div>
+                    </div>
+                    <button @click="openAdModal" class="bg-indigo-600 text-white text-[10px] font-bold px-2.5 py-1 rounded">Ver</button>
+                    <span class="absolute top-0.5 right-1 text-[8px] text-zinc-600">Anuncio 320x50</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ÁREA PRINCIPAL CONTENT & SIDEBAR -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-grow">
+            
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                
+                <!-- COLUMNA PRINCIPAL (8 columnas en Escritorio) -->
+                <div class="lg:col-span-8 space-y-8">
+                    
+                    <!-- Hero & Conversion Input Widget (El motor principal) -->
+                    <div class="bg-zinc-900 border border-zinc-800 p-5 sm:p-7 rounded-2xl shadow-2xl relative gradient-border overflow-hidden">
+                        
+                        <div class="space-y-2 mb-6">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-mono text-indigo-400 font-semibold tracking-wide uppercase flex items-center">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-pulse"></span>
+                                    Servidor v4.8 Listo para extracción
+                                </span>
+                                <span class="text-xs text-zinc-500 font-mono hidden sm:inline">Shortcut: Ctrl + V para pegar</span>
+                            </div>
+                            <h1 class="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
+                                Pega la URL de tu <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">Vídeo o Música</span>
+                            </h1>
+                            <p class="text-zinc-400 text-xs sm:text-sm">
+                                Compatible con YouTube 4K, TikTok sin marca de agua, Reels de Instagram, Twitter/X y pistas de SoundCloud en MP3 320kbps.
+                            </p>
+                        </div>
+
+                        <!-- Hero Input Box -->
+                        <div class="space-y-3">
+                            <div class="relative flex flex-col sm:flex-row items-center gap-2">
+                                <div class="relative w-full">
+                                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500">
+                                        <i :class="detectedPlatformIcon" class="text-lg transition-colors"></i>
+                                    </span>
+                                    <input 
+                                        type="text" 
+                                        v-model="inputUrl"
+                                        @input="handleInputDetection"
+                                        @keyup.enter="processMedia"
+                                        ref="urlInput"
+                                        placeholder="Pega el enlace aquí (ej. https://www.youtube.com/watch?v=...)" 
+                                        class="w-full bg-zinc-950 border border-zinc-700/80 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white text-sm sm:text-base rounded-xl pl-11 pr-24 py-4 outline-none transition placeholder-zinc-500 font-sans"
+                                    />
+                                    <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center space-x-1">
+                                        <button 
+                                            v-if="inputUrl" 
+                                            @click="clearInput" 
+                                            class="text-zinc-500 hover:text-zinc-300 p-1.5 rounded-lg hover:bg-zinc-800 transition"
+                                            title="Limpiar texto"
+                                        >
+                                            <i class="fa-solid fa-xmark text-sm"></i>
+                                        </button>
+                                        <button 
+                                            @click="pasteClipboard" 
+                                            class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-zinc-700 transition flex items-center space-x-1"
+                                            title="Pegar del portapapeles"
+                                        >
+                                            <i class="fa-regular fa-paste text-xs"></i>
+                                            <span class="hidden sm:inline">Pegar</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <button 
+                                    @click="processMedia"
+                                    :disabled="isAnalyzing || !inputUrl"
+                                    class="w-full sm:w-auto px-7 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold rounded-xl shadow-lg shadow-indigo-600/30 transition-all duration-200 flex items-center justify-center space-x-2 whitespace-nowrap text-sm sm:text-base"
+                                >
+                                    <i v-if="isAnalyzing" class="fa-solid fa-circle-notch fa-spin"></i>
+                                    <i v-else class="fa-solid fa-bolt text-amber-300"></i>
+                                    <span>{{ isAnalyzing ? 'Extrayendo...' : 'Convertir' }}</span>
+                                </button>
+                            </div>
+
+                            <!-- Plataformas detectadas rápidas / Presets -->
+                            <div class="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
+                                <div class="flex items-center space-x-3 text-zinc-400">
+                                    <span class="text-zinc-500 font-medium">Soporta:</span>
+                                    <span class="hover:text-red-400 cursor-pointer transition flex items-center" @click="loadSample('youtube')"><i class="fa-brands fa-youtube mr-1 text-red-500"></i>YouTube</span>
+                                    <span class="hover:text-cyan-400 cursor-pointer transition flex items-center" @click="loadSample('tiktok')"><i class="fa-brands fa-tiktok mr-1 text-cyan-400"></i>TikTok</span>
+                                    <span class="hover:text-pink-400 cursor-pointer transition flex items-center" @click="loadSample('instagram')"><i class="fa-brands fa-instagram mr-1 text-pink-500"></i>Instagram</span>
+                                    <span class="hover:text-orange-400 cursor-pointer transition flex items-center" @click="loadSample('soundcloud')"><i class="fa-brands fa-soundcloud mr-1 text-orange-500"></i>SoundCloud</span>
+                                </div>
+                                <button @click="loadSample('youtube')" class="text-indigo-400 hover:text-indigo-300 font-medium underline text-[11px]">
+                                    Cargar enlace de prueba
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Error Banner -->
+                        <div v-if="errorMessage" class="mt-4 bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl flex items-center space-x-3 text-xs font-medium animate-fade-in">
+                            <i class="fa-solid fa-circle-exclamation text-base flex-shrink-0"></i>
+                            <span>{{ errorMessage }}</span>
+                        </div>
+                    </div>
+
+                    <!-- RESULTADOS DE CONVERSIÓN & OPCIONES DE DESCARGA -->
+                    <div v-if="mediaResult" class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl transition-all duration-300">
+                        
+                        <!-- Header del archivo -->
+                        <div class="p-5 sm:p-6 border-b border-zinc-800/80 bg-zinc-950/40">
+                            <div class="flex flex-col md:flex-row gap-5 items-start">
+                                <!-- Thumbnail Preview -->
+                                <div class="relative group rounded-xl overflow-hidden bg-zinc-950 border border-zinc-800 aspect-video w-full md:w-60 flex-shrink-0 shadow-lg">
+                                    <img :src="mediaResult.thumbnail" :alt="mediaResult.title" class="w-full h-full object-cover" />
+                                    <div class="absolute bottom-2 right-2 bg-black/80 backdrop-blur-md text-white font-mono text-[11px] px-2 py-0.5 rounded border border-white/10 font-bold">
+                                        {{ mediaResult.duration }}
+                                    </div>
+                                    <span class="absolute top-2 left-2 bg-indigo-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center space-x-1 shadow">
+                                        <i :class="detectedPlatformIcon"></i>
+                                        <span>{{ mediaResult.platform }}</span>
+                                    </span>
+                                </div>
+
+                                <!-- Metadata info -->
+                                <div class="flex-grow space-y-2">
+                                    <h3 class="text-white font-bold text-base sm:text-lg leading-snug line-clamp-2">
+                                        {{ mediaResult.title }}
+                                    </h3>
+                                    <div class="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-zinc-400 font-mono">
+                                        <span class="flex items-center text-zinc-300"><i class="fa-solid fa-circle-user text-indigo-400 mr-1.5"></i>{{ mediaResult.author }}</span>
+                                        <span class="flex items-center"><i class="fa-solid fa-eye text-zinc-500 mr-1.5"></i>{{ mediaResult.views }} vistas</span>
+                                        <span class="flex items-center"><i class="fa-solid fa-thumbs-up text-zinc-500 mr-1.5"></i>{{ mediaResult.likes }}</span>
+                                    </div>
+                                    
+                                    <div class="pt-2 flex items-center space-x-2">
+                                        <span class="inline-flex items-center text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-md font-mono">
+                                            <i class="fa-solid fa-check text-xs mr-1"></i> Sin marca de agua en HD
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Selector de Formatos & Pestañas -->
+                        <div class="p-5 sm:p-6 space-y-6">
+                            
+                            <!-- Tabs Video vs Audio -->
+                            <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+                                <div class="flex space-x-2 bg-zinc-950 p-1 rounded-xl border border-zinc-800">
+                                    <button 
+                                        @click="selectedTab = 'video'"
+                                        :class="selectedTab === 'video' ? 'bg-indigo-600 text-white font-bold shadow' : 'text-zinc-400 hover:text-white'"
+                                        class="px-4 py-2 rounded-lg text-xs font-medium transition flex items-center space-x-2"
+                                    >
+                                        <i class="fa-solid fa-video"></i>
+                                        <span>Vídeo (MP4)</span>
+                                    </button>
+                                    <button 
+                                        @click="selectedTab = 'audio'"
+                                        :class="selectedTab === 'audio' ? 'bg-indigo-600 text-white font-bold shadow' : 'text-zinc-400 hover:text-white'"
+                                        class="px-4 py-2 rounded-lg text-xs font-medium transition flex items-center space-x-2"
+                                    >
+                                        <i class="fa-solid fa-music"></i>
+                                        <span>Audio MP3 / Música</span>
+                                    </button>
+                                </div>
+                                <span class="text-xs text-zinc-500 font-mono hidden sm:inline">Selecciona la calidad deseada</span>
+                            </div>
+
+                            <!-- Opciones de Vídeo -->
+                            <div v-if="selectedTab === 'video'" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div 
+                                    v-for="fmt in mediaResult.videoOptions" 
+                                    :key="fmt.quality"
+                                    @click="selectedFormat = fmt"
+                                    :class="selectedFormat.quality === fmt.quality ? 'border-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500' : 'border-zinc-800 bg-zinc-950/60 hover:border-zinc-700'"
+                                    class="p-3.5 rounded-xl border cursor-pointer transition flex items-center justify-between group"
+                                >
+                                    <div class="space-y-0.5">
+                                        <div class="flex items-center space-x-2">
+                                            <span class="text-white font-bold text-sm">{{ fmt.quality }}</span>
+                                            <span v-if="fmt.tag" class="bg-indigo-500/20 text-indigo-300 font-mono text-[9px] px-1.5 py-0.5 rounded border border-indigo-500/30 font-bold uppercase">{{ fmt.tag }}</span>
+                                        </div>
+                                        <div class="text-[11px] text-zinc-500 font-mono">Formato {{ fmt.ext.toUpperCase() }} • {{ fmt.fps }} FPS</div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-xs font-mono font-bold text-zinc-300">{{ fmt.size }}</div>
+                                        <div class="text-[10px] text-emerald-400 font-mono"><i class="fa-solid fa-bolt mr-0.5"></i>Rápido</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Opciones de Audio -->
+                            <div v-if="selectedTab === 'audio'" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div 
+                                    v-for="fmt in mediaResult.audioOptions" 
+                                    :key="fmt.quality"
+                                    @click="selectedFormat = fmt"
+                                    :class="selectedFormat.quality === fmt.quality ? 'border-purple-500 bg-purple-500/10 ring-1 ring-purple-500' : 'border-zinc-800 bg-zinc-950/60 hover:border-zinc-700'"
+                                    class="p-3.5 rounded-xl border cursor-pointer transition flex items-center justify-between group"
+                                >
+                                    <div class="space-y-0.5">
+                                        <div class="flex items-center space-x-2">
+                                            <span class="text-white font-bold text-sm">{{ fmt.quality }}</span>
+                                            <span v-if="fmt.tag" class="bg-purple-500/20 text-purple-300 font-mono text-[9px] px-1.5 py-0.5 rounded border border-purple-500/30 font-bold uppercase">{{ fmt.tag }}</span>
+                                        </div>
+                                        <div class="text-[11px] text-zinc-500 font-mono">Audio HD • {{ fmt.ext.toUpperCase() }}</div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-xs font-mono font-bold text-zinc-300">{{ fmt.size }}</div>
+                                        <div class="text-[10px] text-purple-400 font-mono">320kbps Real</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Live Progress Bar durante la extracción -->
+                            <div v-if="isDownloading" class="bg-zinc-950 p-4 rounded-xl border border-zinc-800 space-y-3">
+                                <div class="flex justify-between items-center text-xs font-mono">
+                                    <span class="text-indigo-400 font-semibold flex items-center">
+                                        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>
+                                        {{ downloadStage }}
+                                    </span>
+                                    <span class="text-white font-bold">{{ downloadProgress }}%</span>
+                                </div>
+                                <div class="w-full bg-zinc-800 h-2.5 rounded-full overflow-hidden">
+                                    <div class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-200" :style="{ width: downloadProgress + '%' }"></div>
+                                </div>
+                                <div class="flex justify-between text-[11px] text-zinc-500 font-mono">
+                                    <span>Velocidad: 18.4 MB/s</span>
+                                    <span>ETA: ~{{ Math.max(1, Math.ceil((100 - downloadProgress) / 25)) }}s</span>
+                                </div>
+                            </div>
+
+                            <!-- Botón Acción Final -->
+                            <button 
+                                v-else
+                                @click="initiateDownloadProcess" 
+                                class="w-full py-4 bg-gradient-to-r from-emerald-500 via-teal-600 to-emerald-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold rounded-xl shadow-xl shadow-emerald-900/20 transition-all duration-200 flex items-center justify-center space-x-3 text-base"
+                            >
+                                <i class="fa-solid fa-download text-lg"></i>
+                                <span>Descargar {{ selectedFormat.ext.toUpperCase() }} ({{ selectedFormat.quality }})</span>
+                            </button>
+
+                        </div>
+                    </div>
+
+                    <!-- BLOQUE PUBLICITARIO #2: Native In-Feed Ad (Patrocinado / Recomendado) -->
+                    <div v-if="showAdBanners" class="bg-zinc-900/80 border border-zinc-800/80 rounded-2xl p-4 sm:p-5 ad-placeholder relative overflow-hidden">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-[10px] font-mono text-zinc-500 uppercase tracking-wider flex items-center">
+                                <i class="fa-solid fa-rectangle-ad mr-1.5 text-amber-500"></i>Contenido Patrocinado Recomendado
+                            </span>
+                            <span class="text-[9px] text-zinc-600">AdSense In-Feed Ad</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                            <div class="flex items-start space-x-3">
+                                <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center flex-shrink-0 text-white text-xl font-bold shadow-md">
+                                    <i class="fa-solid fa-gamepad"></i>
+                                </div>
+                                <div class="space-y-1">
+                                    <h4 class="text-white text-sm font-bold leading-tight hover:text-indigo-400 cursor-pointer" @click="openAdModal">
+                                        Juegos Online de Alta Velocidad sin Instalación
+                                    </h4>
+                                    <p class="text-zinc-400 text-xs line-clamp-2">Juega al instante en tu navegador con tasa de refresco ultra fluida. Sin descargas requeridas.</p>
+                                </div>
+                            </div>
+                            <div class="flex sm:justify-end">
+                                <button @click="openAdModal" class="w-full sm:w-auto px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-indigo-300 border border-zinc-700 text-xs font-bold rounded-lg transition text-center">
+                                    Jugar Ahora <i class="fa-solid fa-external-link text-[10px] ml-1"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PLATAFORMAS SOPORTADAS Y CARACTERÍSTICAS TÉCNICAS -->
+                    <div id="supported-platforms" class="space-y-4 pt-4">
+                        <h3 class="text-xl font-bold text-white tracking-tight flex items-center">
+                            <i class="fa-solid fa-layer-group text-indigo-400 mr-2.5"></i>
+                            Plataformas y Formatos Soportados
+                        </h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="bg-zinc-900/60 border border-zinc-800/80 p-4 rounded-xl flex items-start space-x-3">
+                                <div class="w-10 h-10 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 flex items-center justify-center text-lg flex-shrink-0">
+                                    <i class="fa-brands fa-youtube"></i>
+                                </div>
+                                <div class="space-y-0.5">
+                                    <h4 class="text-white text-sm font-bold">YouTube Video & Shorts</h4>
+                                    <p class="text-zinc-400 text-xs">Descarga vídeos en 4K Ultra HD, 60fps y listas de reproducción convertidas directamente a MP3 320kbps.</p>
+                                </div>
+                            </div>
+
+                            <div class="bg-zinc-900/60 border border-zinc-800/80 p-4 rounded-xl flex items-start space-x-3">
+                                <div class="w-10 h-10 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center justify-center text-lg flex-shrink-0">
+                                    <i class="fa-brands fa-tiktok"></i>
+                                </div>
+                                <div class="space-y-0.5">
+                                    <h4 class="text-white text-sm font-bold">TikTok Sin Marca de Agua</h4>
+                                    <p class="text-zinc-400 text-xs">Obtén vídeos limpios en HD sin el logotipo flotante ni la marca de agua al final del Clip.</p>
+                                </div>
+                            </div>
+
+                            <div class="bg-zinc-900/60 border border-zinc-800/80 p-4 rounded-xl flex items-start space-x-3">
+                                <div class="w-10 h-10 rounded-lg bg-pink-500/10 text-pink-400 border border-pink-500/20 flex items-center justify-center text-lg flex-shrink-0">
+                                    <i class="fa-brands fa-instagram"></i>
+                                </div>
+                                <div class="space-y-0.5">
+                                    <h4 class="text-white text-sm font-bold">Instagram Reels & Stories</h4>
+                                    <p class="text-zinc-400 text-xs">Extracción directa de contenido público, carruseles de fotos y audios en tendencia.</p>
+                                </div>
+                            </div>
+
+                            <div class="bg-zinc-900/60 border border-zinc-800/80 p-4 rounded-xl flex items-start space-x-3">
+                                <div class="w-10 h-10 rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20 flex items-center justify-center text-lg flex-shrink-0">
+                                    <i class="fa-brands fa-soundcloud"></i>
+                                </div>
+                                <div class="space-y-0.5">
+                                    <h4 class="text-white text-sm font-bold">SoundCloud & Pistas Audio</h4>
+                                    <p class="text-zinc-400 text-xs">Descarga canciones completas con etiquetas ID3, portada del álbum y bitrate original de alta fidelidad.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PREGUNTAS FRECUENTES (FAQ Accordion para SEO & Google Approval) -->
+                    <div id="faq" class="space-y-4 pt-4 border-t border-zinc-800/80">
+                        <h3 class="text-xl font-bold text-white tracking-tight flex items-center">
+                            <i class="fa-solid fa-circle-question text-indigo-400 mr-2.5"></i>
+                            Preguntas Frecuentes
+                        </h3>
+                        <div class="space-y-3">
+                            <div v-for="(item, idx) in faqItems" :key="idx" class="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+                                <button 
+                                    @click="toggleFaq(idx)" 
+                                    class="w-full text-left p-4 flex items-center justify-between text-sm font-bold text-white hover:text-indigo-400 transition"
+                                >
+                                    <span>{{ item.question }}</span>
+                                    <i :class="item.open ? 'fa-solid fa-chevron-up text-indigo-400' : 'fa-solid fa-chevron-down text-zinc-500'"></i>
+                                </button>
+                                <div v-if="item.open" class="px-4 pb-4 text-xs text-zinc-400 leading-relaxed border-t border-zinc-800/50 pt-3">
+                                    {{ item.answer }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- COLUMNA LATERAL (Sidebar con Anuncios Sticky & Widgets) -->
+                <aside class="lg:col-span-4 space-y-6 lg:sticky lg:top-20">
+                    
+                    <!-- BLOQUE PUBLICITARIO #3: Sidebar Medium Rectangle / Skyscraper (300x250 / 300x600) -->
+                    <div v-if="showAdBanners" class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3 ad-placeholder relative overflow-hidden shadow-xl">
+                        <div class="flex items-center justify-between text-zinc-500 text-[10px] font-mono">
+                            <span>ANUNCIO PUBLICITARIO</span>
+                            <span>AdSense • 300x250 / 300x600</span>
+                        </div>
+                        
+                        <!-- Simulación de Anuncio Publicitario de Alto eCPM -->
+                        <div class="bg-gradient-to-b from-indigo-950/60 to-zinc-950 p-5 rounded-xl border border-indigo-500/20 text-center space-y-4">
+                            <span class="inline-block px-2.5 py-1 bg-amber-500/20 text-amber-300 font-mono text-[10px] font-bold rounded-full border border-amber-500/30 uppercase">
+                                Patrocinador Premium
+                            </span>
+                            <div class="w-16 h-16 mx-auto rounded-2xl bg-indigo-600/30 text-indigo-400 border border-indigo-500/40 flex items-center justify-center text-2xl font-bold shadow-inner">
+                                <i class="fa-solid fa-cloud-bolt"></i>
+                            </div>
+                            <div class="space-y-1">
+                                <h4 class="text-white font-bold text-base">Almacenamiento Cloud Ilimitado</h4>
+                                <p class="text-zinc-400 text-xs">Guarda tus descargas directamente en tu nube privada con backup automático.</p>
+                            </div>
+                            <button @click="openAdModal" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl transition shadow-lg">
+                                Obtener 100 GB Gratis
+                            </button>
+                        </div>
+                        <div class="text-[9px] text-zinc-600 text-center font-mono">Anuncio relevante basado en tus búsquedas</div>
+                    </div>
+
+                    <!-- Widget de Estado del Servidor & Velocidad -->
+                    <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-3">
+                        <h4 class="text-white font-bold text-xs uppercase tracking-wider text-zinc-400 flex items-center">
+                            <i class="fa-solid fa-server mr-2 text-emerald-400"></i>Estado de la Red & Nodos
+                        </h4>
+                        <div class="space-y-2 text-xs font-mono">
+                            <div class="flex justify-between items-center py-1 border-b border-zinc-800">
+                                <span class="text-zinc-400">Motor FFmpeg:</span>
+                                <span class="text-emerald-400 font-bold">Activo (10Gbit)</span>
+                            </div>
+                            <div class="flex justify-between items-center py-1 border-b border-zinc-800">
+                                <span class="text-zinc-400">Latencia Extracción:</span>
+                                <span class="text-zinc-200">24 ms</span>
+                            </div>
+                            <div class="flex justify-between items-center py-1">
+                                <span class="text-zinc-400">Carga del Servidor:</span>
+                                <span class="text-indigo-400">14% Capacitado</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BLOQUE PUBLICITARIO #4: Sidebar Secondary Ad Box -->
+                    <div v-if="showAdBanners" class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 ad-placeholder text-center space-y-2">
+                        <span class="text-[9px] text-zinc-600 font-mono block">Publicidad AdSense (300x100)</span>
+                        <div class="p-3 bg-zinc-950 rounded-lg border border-zinc-800 text-xs text-zinc-400 hover:text-white cursor-pointer transition" @click="openAdModal">
+                            <i class="fa-solid fa-graduation-cap text-indigo-400 text-lg mb-1 block"></i>
+                            <span class="font-bold block text-white">Curso de Desarrollo Web Senior</span>
+                            <span class="text-[10px] text-zinc-500">Aprende React, Node.js y Cloud Architecture.</span>
+                        </div>
+                    </div>
+
+                </aside>
+
+            </div>
+
+        </main>
+
+        <!-- BLOQUE PUBLICITARIO #5: Sticky Bottom Anchor Ad (Anuncio Fijo Inferior Desmontable) -->
+        <div v-if="showAdBanners && showAnchorAd" class="fixed bottom-0 inset-x-0 z-50 bg-zinc-950/95 border-t border-zinc-800 backdrop-blur-lg px-4 py-2 flex items-center justify-center shadow-2xl">
+            <div class="max-w-4xl w-full flex items-center justify-between gap-4">
+                <div class="flex items-center space-x-3 min-w-0">
+                    <span class="bg-amber-500/20 text-amber-300 font-mono text-[9px] px-1.5 py-0.5 rounded border border-amber-500/30 font-bold uppercase flex-shrink-0 hidden sm:inline">Anuncio</span>
+                    <div class="truncate text-xs">
+                        <span class="text-white font-bold block truncate">Acelerador de Descargas de Música & Vídeo Pro</span>
+                        <span class="text-zinc-400 text-[11px] hidden sm:block">Descarga a máxima velocidad sin esperas.</span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2 flex-shrink-0">
+                    <button @click="openAdModal" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg transition shadow">
+                        Instalar Gratis
+                    </button>
+                    <button @click="showAnchorAd = false" class="text-zinc-500 hover:text-zinc-300 p-1.5 rounded-lg hover:bg-zinc-800 transition" title="Cerrar Anuncio">
+                        <i class="fa-solid fa-xmark text-sm"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL INTERSTITIAL / CONTA DORMITORIO DE PATROCINADOR (Sponsor Countdown Modal) -->
+        <div v-if="showAdModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
+            <div class="bg-zinc-900 border border-zinc-800 w-full max-w-lg rounded-2xl p-6 space-y-5 shadow-2xl relative">
+                
+                <button @click="closeAdModal" class="absolute top-4 right-4 text-zinc-500 hover:text-white p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+
+                <div class="text-center space-y-2">
+                    <span class="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px] font-mono font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
+                        Patrocinado por nuestro Anunciante
+                    </span>
+                    <h3 class="text-xl font-bold text-white">Preparando tu Enlace de Descarga</h3>
+                    <p class="text-zinc-400 text-xs">Tu archivo se procesará inmediatamente al finalizar la cuenta atrás.</p>
+                </div>
+
+                <!-- Ad Block Modal Content -->
+                <div class="bg-zinc-950 p-6 rounded-xl border border-zinc-800 text-center space-y-4 ad-placeholder">
+                    <i class="fa-solid fa-bolt-lightning text-4xl text-amber-400"></i>
+                    <h4 class="text-white font-bold text-base">Servidores CDN de Alta Velocidad</h4>
+                    <p class="text-zinc-400 text-xs leading-relaxed">
+                        Consigue velocidad ilimitada de descarga activando la cuenta de prueba en nuestro patrocinador de almacenamiento.
+                    </p>
+                    <button @click="closeAdModal" class="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold text-xs rounded-xl shadow-lg hover:opacity-90 transition">
+                        Visitar Patrocinador
+                    </button>
+                </div>
+
+                <!-- Timer Button -->
+                <div class="flex items-center justify-between pt-2">
+                    <span class="text-xs text-zinc-500 font-mono">
+                        {{ modalCountdown > 0 ? `Por favor espera: ${modalCountdown}s` : '¡Descarga Lista!' }}
+                    </span>
+                    <button 
+                        @click="executeFinalDownload" 
+                        :disabled="modalCountdown > 0"
+                        :class="modalCountdown > 0 ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg'"
+                        class="px-5 py-2.5 rounded-xl font-bold text-xs transition flex items-center space-x-2"
+                    >
+                        <span>{{ modalCountdown > 0 ? 'Continuar...' : 'Descargar Archivo Ahora' }}</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Legal & SEO -->
+        <footer class="border-t border-zinc-800/80 bg-zinc-950 py-8 text-xs text-zinc-500">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+                <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b border-zinc-800/80 pb-6">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">
+                            <i class="fa-solid fa-bolt text-sm"></i>
+                        </div>
+                        <span class="text-base font-bold text-white">MediaGrab.pro</span>
+                    </div>
+                    <p class="text-center md:text-right text-zinc-400 max-w-lg">
+                        Herramienta de utilidad pública para extracción legítima de medios propios y de libre distribución.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+                    <div>
+                        <h5 class="font-bold text-white mb-2">Herramientas</h5>
+                        <ul class="space-y-1.5">
+                            <li><a href="#" @click.prevent="loadSample('youtube')" class="hover:text-zinc-300">Descargador de YouTube</a></li>
+                            <li><a href="#" @click.prevent="loadSample('tiktok')" class="hover:text-zinc-300">TikTok MP4 Sin Marca</a></li>
+                            <li><a href="#" @click.prevent="loadSample('soundcloud')" class="hover:text-zinc-300">Convertidor MP3 320kbps</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h5 class="font-bold text-white mb-2">Legal & Términos</h5>
+                        <ul class="space-y-1.5">
+                            <li><a href="#" class="hover:text-zinc-300">Términos del Servicio</a></li>
+                            <li><a href="#" class="hover:text-zinc-300">Política de Privacidad</a></li>
+                            <li><a href="#" class="hover:text-zinc-300">Aviso DMCA & Copyright</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h5 class="font-bold text-white mb-2">Desarrolladores</h5>
+                        <ul class="space-y-1.5">
+                            <li><a href="#" class="hover:text-zinc-300">API Documentation</a></li>
+                            <li><a href="#" class="hover:text-zinc-300">Estado de Servidores</a></li>
+                            <li><a href="#" class="hover:text-zinc-300">Soporte Técnico</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h5 class="font-bold text-white mb-2">Publicidad</h5>
+                        <ul class="space-y-1.5">
+                            <li><a href="#" @click.prevent="toggleAdPreviewMode" class="hover:text-zinc-300">Anúnciate aquí</a></li>
+                            <li><a href="#" class="hover:text-zinc-300">Redes Ad-Tech</a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-zinc-900 flex flex-col sm:flex-row justify-between items-center text-[11px] text-zinc-600 gap-2">
+                    <p>© 2026 MediaGrab.pro - Todos los derechos reservados.</p>
+                    <p class="font-mono">Engine: Node.js / yt-dlp / FFmpeg WebAssembly</p>
+                </div>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- Script de la aplicación Vue 3 -->
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    inputUrl: '',
+                    isAnalyzing: false,
+                    errorMessage: '',
+                    mediaResult: null,
+                    selectedTab: 'video',
+                    selectedFormat: null,
+                    
+                    // Estado de Descarga & Progreso
+                    isDownloading: false,
+                    downloadProgress: 0,
+                    downloadStage: '',
+
+                    // Estado de Monetización & Anuncios
+                    showAdBanners: true,
+                    showAnchorAd: true,
+                    showAdModal: false,
+                    modalCountdown: 3,
+                    countdownTimer: null,
+
+                    // Preguntas frecuentes
+                    faqItems: [
+                        {
+                            question: '¿Es completamente gratis descargar vídeos y música?',
+                            answer: 'Sí, MediaGrab.pro es 100% gratuito e ilimitado. Mantenemos el servicio activo a través de anuncios no intrusivos de red publicitaria.',
+                            open: true
+                        },
+                        {
+                            question: '¿Cómo puedo extraer solo el audio MP3 de un vídeo de YouTube?',
+                            answer: 'Pega el enlace en la caja de texto superior, pulsa Convertir, dirígete a la pestaña "Audio MP3 / Música" y selecciona la calidad deseada (hasta 320kbps).',
+                            open: false
+                        },
+                        {
+                            question: '¿Los vídeos de TikTok se descargan sin marca de agua?',
+                            answer: 'Correcto. Nuestro motor elimina automáticamente la marca de agua y los bordes flotantes de TikTok e Instagram Reels.',
+                            open: false
+                        },
+                        {
+                            question: '¿Dónde se guardan los archivos una vez descargados?',
+                            answer: 'Los archivos se guardan automáticamente en la carpeta de "Descargas" por defecto de tu navegador web o dispositivo móvil.',
+                            open: false
+                        }
+                    ]
+                };
+            },
+
+            computed: {
+                detectedPlatformIcon() {
+                    const url = this.inputUrl.toLowerCase();
+                    if (url.includes('youtube.com') || url.includes('youtu.be')) return 'fa-brands fa-youtube text-red-500';
+                    if (url.includes('tiktok.com')) return 'fa-brands fa-tiktok text-cyan-400';
+                    if (url.includes('instagram.com')) return 'fa-brands fa-instagram text-pink-500';
+                    if (url.includes('twitter.com') || url.includes('x.com')) return 'fa-brands fa-x-twitter text-white';
+                    if (url.includes('soundcloud.com')) return 'fa-brands fa-soundcloud text-orange-500';
+                    return 'fa-solid fa-link text-zinc-500';
+                }
+            },
+
+            watch: {
+                selectedTab(newTab) {
+                    if (this.mediaResult) {
+                        this.selectedFormat = newTab === 'video' 
+                            ? this.mediaResult.videoOptions[0] 
+                            : this.mediaResult.audioOptions[0];
+                    }
+                }
+            },
+
+            mounted() {
+                // Escuchar atajo de teclado Ctrl+V para auto-foco
+                window.addEventListener('keydown', (e) => {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+                        if (document.activeElement !== this.$refs.urlInput) {
+                            this.$refs.urlInput.focus();
+                        }
+                    }
+                });
+            },
+
+            methods: {
+                async pasteClipboard() {
+                    try {
+                        const text = await navigator.clipboard.readText();
+                        if (text) {
+                            this.inputUrl = text;
+                            this.processMedia();
+                        }
+                    } catch (err) {
+                        this.errorMessage = 'Permiso de portapapeles denegado. Pega la URL manualmente.';
+                    }
+                },
+
+                clearInput() {
+                    this.inputUrl = '';
+                    this.mediaResult = null;
+                    this.errorMessage = '';
+                },
+
+                handleInputDetection() {
+                    this.errorMessage = '';
+                },
+
+                loadSample(type) {
+                    const samples = {
+                        youtube: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                        tiktok: 'https://www.tiktok.com/@sample/video/7123456789',
+                        instagram: 'https://www.instagram.com/reel/C123456789/',
+                        soundcloud: 'https://soundcloud.com/artist/sample-track'
+                    };
+                    this.inputUrl = samples[type] || samples.youtube;
+                    this.processMedia();
+                },
+
+                processMedia() {
+                    if (!this.inputUrl) return;
+
+                    this.errorMessage = '';
+                    this.isAnalyzing = true;
+                    this.mediaResult = null;
+
+                    // Simulación de análisis del backend con respuesta inmediata
+                    setTimeout(() => {
+                        this.isAnalyzing = false;
+
+                        const url = this.inputUrl.toLowerCase();
+                        let platform = 'YouTube';
+                        let thumb = 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=800&q=80';
+                        let title = 'Música Chillout & Beats para Concentración / Trabajo';
+
+                        if (url.includes('tiktok')) {
+                            platform = 'TikTok';
+                            thumb = 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=800&q=80';
+                            title = 'Tendencia TikTok Viral Clip - Edición HD Sin Marca';
+                        } else if (url.includes('instagram')) {
+                            platform = 'Instagram';
+                            thumb = 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&w=800&q=80';
+                            title = 'Instagram Reel Destacado - Viajes & Fotografía';
+                        } else if (url.includes('soundcloud')) {
+                            platform = 'SoundCloud';
+                            thumb = 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=800&q=80';
+                            title = 'Electro Synthwave Session - Master 320kbps Original';
+                        }
+
+                        this.mediaResult = {
+                            title: title,
+                            author: 'Canal Oficial Certificado',
+                            duration: '03:45',
+                            views: '2,840,120',
+                            likes: '142K',
+                            platform: platform,
+                            thumbnail: thumb,
+                            videoOptions: [
+                                { quality: '1080p FHD', ext: 'mp4', fps: '60', size: '54.2 MB', tag: 'Más Popular' },
+                                { quality: '4K UltraHD', ext: 'mp4', fps: '60', size: '182.0 MB', tag: 'Máxima Calidad' },
+                                { quality: '720p HD', ext: 'mp4', fps: '30', size: '28.1 MB' },
+                                { quality: '480p SD', ext: 'mp4', fps: '30', size: '14.5 MB' }
+                            ],
+                            audioOptions: [
+                                { quality: '320 kbps MP3', ext: 'mp3', size: '8.6 MB', tag: 'Alta Fidelidad' },
+                                { quality: '256 kbps MP3', ext: 'mp3', size: '6.2 MB' },
+                                { quality: 'WAV Lossless', ext: 'wav', size: '34.0 MB', tag: 'Sin Compresión' }
+                            ]
+                        };
+
+                        this.selectedTab = 'video';
+                        this.selectedFormat = this.mediaResult.videoOptions[0];
+
+                    }, 800);
+                },
+
+                initiateDownloadProcess() {
+                    if (this.showAdBanners) {
+                        this.openAdModal();
+                    } else {
+                        this.startConversionSimulation();
+                    }
+                },
+
+                openAdModal() {
+                    this.showAdModal = true;
+                    this.modalCountdown = 3;
+                    clearInterval(this.countdownTimer);
+                    
+                    this.countdownTimer = setInterval(() => {
+                        if (this.modalCountdown > 0) {
+                            this.modalCountdown--;
+                        } else {
+                            clearInterval(this.countdownTimer);
+                        }
+                    }, 1000);
+                },
+
+                closeAdModal() {
+                    this.showAdModal = false;
+                    clearInterval(this.countdownTimer);
+                },
+
+                executeFinalDownload() {
+                    this.closeAdModal();
+                    this.startConversionSimulation();
+                },
+
+                startConversionSimulation() {
+                    this.isDownloading = true;
+                    this.downloadProgress = 0;
+                    this.downloadStage = 'Iniciando conexión con el nodo servidor...';
+
+                    const stages = [
+                        { pct: 25, label: 'Extrayendo streams de audio y vídeo...' },
+                        { pct: 60, label: 'Procesando contenedor con FFmpeg...' },
+                        { pct: 90, label: 'Generando enlace de descarga directa...' },
+                        { pct: 100, label: '¡Descarga completada!' }
+                    ];
+
+                    let currentStage = 0;
+                    const interval = setInterval(() => {
+                        this.downloadProgress += Math.floor(Math.random() * 20) + 15;
+                        
+                        if (this.downloadProgress >= stages[currentStage].pct) {
+                            this.downloadStage = stages[currentStage].label;
+                            currentStage = Math.min(currentStage + 1, stages.length - 1);
+                        }
+
+                        if (this.downloadProgress >= 100) {
+                            this.downloadProgress = 100;
+                            clearInterval(interval);
+
+                            setTimeout(() => {
+                                this.triggerFileSave();
+                                this.isDownloading = false;
+                            }, 400);
+                        }
+                    }, 250);
+                },
+
+                triggerFileSave() {
+                    const content = `MediaGrab.pro - Archivo Descargado\nTítulo: ${this.mediaResult.title}\nFormato: ${this.selectedFormat.ext.toUpperCase()} (${this.selectedFormat.quality})`;
+                    const blob = new Blob([content], { type: 'text/plain' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${this.mediaResult.title.slice(0, 25).replace(/[^a-z0-9]/gi, '_')}.${this.selectedFormat.ext}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                },
+
+                toggleFaq(index) {
+                    this.faqItems[index].open = !this.faqItems[index].open;
+                },
+
+                toggleAdPreviewMode() {
+                    this.showAdBanners = !this.showAdBanners;
+                },
+
+                scrollToSection(id) {
+                    const el = document.getElementById(id);
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                },
+
+                resetToHome() {
+                    this.inputUrl = '';
+                    this.mediaResult = null;
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
